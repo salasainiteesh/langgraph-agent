@@ -1,0 +1,45 @@
+steps:
+  # Build the frontend image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--platform'
+      - 'linux/amd64'
+      - '-f'
+      - 'Dockerfile.frontend'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/langgraph-repo/langgraph-frontend:$COMMIT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/langgraph-repo/langgraph-frontend:latest'
+      - '.'
+
+  # Push to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/langgraph-repo/langgraph-frontend'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'langgraph-frontend'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/langgraph-repo/langgraph-frontend:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8501'
+      - '--memory'
+      - '1Gi'
+      - '--set-env-vars'
+      - 'BACKEND_URL=https://langgraph-agent-752733470815.us-central1.run.app'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
